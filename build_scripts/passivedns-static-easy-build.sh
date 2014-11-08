@@ -9,6 +9,8 @@
 
 PCAP=1.5.3
 PFRING=5.6.1
+LDNS=1.6.17
+JANSSON=2.7
 
 TDIR="/opt/passivedns"
 TEMPDIR="/opt/passivedns/deleteme"
@@ -90,6 +92,32 @@ else
     PCAPDIR=`pwd`/libpcap-$PCAP
 fi
 
+echo "PASSIVEDNS: Building ldns";
+# ldns
+if [ ! -f "ldns-$LDNS.tar.gz" ]; then
+  wget http://www.nlnetlabs.nl/downloads/ldns/ldns-$LDNS.tar.gz
+fi
+tar zxf ldns-$LDNS.tar.gz
+# ! without-ssl
+(cd ldns-$LDNS; ./configure --enable-static --disable-shared --without-pyldnsx --without-ssl --disable-sha2  --disable-gost --disable-ecdsa --disable-dane; make)
+LDNSDIR=`pwd`/ldns-$LDNS
+
+
+echo "PASSIVEDNS: Building jansson";
+# jansson
+if [ ! -f "jansson-$JANSSON.tar.gz" ]; then
+  wget http://www.digip.org/jansson/releases/jansson-$JANSSON.tar.gz
+fi
+tar zxf jansson-$JANSSON.tar.gz
+# ! without-ssl
+(cd jansson-$JANSSON; ./configure --enable-static --disable-shared ; make)
+JANSSONDIR=`pwd`/jansson-$JANSSON
+
+
+
+
+
+
 # Now build passivedns
 echo "PASSIVEDNS: Building passivedns"
 cd ..
@@ -116,6 +144,7 @@ if [ $? -ne 0 ]; then
 fi
 
 
-./configure LDFLAGS=-static --prefix=$TDIR --with-libpcap-includes=$PCAPDIR --with-libpcap-libraries=$PCAPDIR 
-#./configure
-# make
+
+./configure LDFLAGS=-static --prefix=$TDIR --with-libpcap-includes=$PCAPDIR --with-libpcap-libraries=$PCAPDIR --with-ldns-includes=$LDNSDIR --with-ldns-libraries=$LDNSDIR/.libs  --with-jansson-includes=$JANSSONDIR --with-jansson-libraries=$JANSSONDIR/.libs --enable-json
+
+make
