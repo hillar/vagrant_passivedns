@@ -49,7 +49,7 @@ if [ -f "/etc/redhat-release" ]; then
 fi
 
 if [ -f "/etc/debian_version" ]; then
-  apt-get -y install wget git-core binutils-dev autoconf g++ flex build-essential bison libtool
+  apt-get -y -qq install wget git-core binutils-dev autoconf g++ flex build-essential bison libtool
   if [ $? -ne 0 ]; then
     echo "PASSIVEDNS - apt-get failed"
     exit 1
@@ -74,7 +74,7 @@ if [ $DOPFRING -eq 1 ]; then
     # pfring
     echo "PASSIVEDNS: Building libpcap with pfring";
     if [ ! -f "PF_RING-$PFRING.tar.gz" ]; then
-      wget -O PF_RING-$PFRING.tar.gz http://sourceforge.net/projects/ntop/files/PF_RING/PF_RING-$PFRING.tar.gz/download
+      wget -q -O PF_RING-$PFRING.tar.gz http://sourceforge.net/projects/ntop/files/PF_RING/PF_RING-$PFRING.tar.gz/download
     fi
     tar zxf PF_RING-$PFRING.tar.gz
     (cd PF_RING-$PFRING; make)
@@ -85,38 +85,33 @@ else
     echo "PASSIVEDNS: Building libpcap without pfring";
     # libpcap
     if [ ! -f "libpcap-$PCAP.tar.gz" ]; then
-      wget http://www.tcpdump.org/release/libpcap-$PCAP.tar.gz
+      wget -q http://www.tcpdump.org/release/libpcap-$PCAP.tar.gz
     fi
     tar zxf libpcap-$PCAP.tar.gz
-    (cd libpcap-$PCAP; ./configure --disable-dbus; make)
+    (cd libpcap-$PCAP; ./configure --quiet --disable-dbus; make --quiet)
     PCAPDIR=`pwd`/libpcap-$PCAP
 fi
 
 echo "PASSIVEDNS: Building ldns";
 # ldns
 if [ ! -f "ldns-$LDNS.tar.gz" ]; then
-  wget http://www.nlnetlabs.nl/downloads/ldns/ldns-$LDNS.tar.gz
+  wget -q http://www.nlnetlabs.nl/downloads/ldns/ldns-$LDNS.tar.gz
 fi
 tar zxf ldns-$LDNS.tar.gz
 # ! without-ssl
-(cd ldns-$LDNS; ./configure --enable-static --disable-shared --without-pyldnsx --without-ssl --disable-sha2  --disable-gost --disable-ecdsa --disable-dane; make)
+(cd ldns-$LDNS; ./configure --quiet --enable-static --disable-shared --without-pyldnsx --without-ssl --disable-sha2  --disable-gost --disable-ecdsa --disable-dane; make --quiet)
 LDNSDIR=`pwd`/ldns-$LDNS
 
 
 echo "PASSIVEDNS: Building jansson";
 # jansson
 if [ ! -f "jansson-$JANSSON.tar.gz" ]; then
-  wget http://www.digip.org/jansson/releases/jansson-$JANSSON.tar.gz
+  wget -q http://www.digip.org/jansson/releases/jansson-$JANSSON.tar.gz
 fi
 tar zxf jansson-$JANSSON.tar.gz
 # ! without-ssl
-(cd jansson-$JANSSON; ./configure --enable-static --disable-shared ; make)
+(cd jansson-$JANSSON; ./configure --quiet --enable-static --disable-shared ; make --quiet)
 JANSSONDIR=`pwd`/jansson-$JANSSON
-
-
-
-
-
 
 # Now build passivedns
 echo "PASSIVEDNS: Building passivedns"
@@ -136,7 +131,7 @@ if [ $? -ne 0 ]; then
     # try again
     autoreconf --install
     if [ $? -ne 0 ]; then
-      echo " aotoreconf failed, version $autoreconf_version"
+      echo " autoreconf failed, version $autoreconf_version"
       exit 1
     else
        echo "PASSIVEDNS - autoreconf with version $autoreconf_version"
@@ -145,6 +140,14 @@ fi
 
 
 
-./configure LDFLAGS=-static --prefix=$TDIR --with-libpcap-includes=$PCAPDIR --with-libpcap-libraries=$PCAPDIR --with-ldns-includes=$LDNSDIR --with-ldns-libraries=$LDNSDIR/.libs  --with-jansson-includes=$JANSSONDIR --with-jansson-libraries=$JANSSONDIR/.libs --enable-json
+./configure --quiet LDFLAGS=-static --prefix=$TDIR --with-libpcap-includes=$PCAPDIR --with-libpcap-libraries=$PCAPDIR --with-ldns-includes=$LDNSDIR --with-ldns-libraries=$LDNSDIR/.libs  --with-jansson-includes=$JANSSONDIR/src --with-jansson-libraries=$JANSSONDIR/src/.libs --enable-json
 
-make
+
+make --quiet
+#todo fix warnings ...
+mkdir -p $TDIR/bin
+cp src/passivedns $TDIR/bin
+
+/opt/passivedns/bin/passivedns -V
+
+
