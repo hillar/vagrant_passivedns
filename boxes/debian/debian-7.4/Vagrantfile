@@ -1,4 +1,12 @@
 VAGRANTFILE_API_VERSION = "2"
+
+$update_script = <<SCRIPT
+apt-get -qq update
+apt-get -y -qq update
+SCRIPT
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "chef/debian-7.4"
+  config.vm.provision "shell", inline: $update_script
+  config.vm.provision "shell", path: "../../../build_scripts/passivedns-static-easy-build.sh"
 end
