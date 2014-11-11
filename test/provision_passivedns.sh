@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+
+
 /opt/passivedns/bin/passivedns -V
 if [ $? -ne 0 ]; then 
 	echo 'not a passivedns box !?'
@@ -19,37 +22,74 @@ node json2elastic.js
 
 # fill logs 
 
-/opt/passivedns/bin/passivedns -j -J -P 1
+/opt/passivedns/bin/passivedns -j -J -P 1 -X 46CDNOPRSTMnfsxoryetaz -D
 
-#!/bin/bash
+sleep 1
+
+echo "wait, doing some digging to fill log ..."
 isp=$(dig +noall +stats 2>&1 | awk '$2~/^SERVER:$/{split($3,dnsip,"#");print dnsip[1]}');
-m="-------------------------------------------------------------------------------";
-s="                                                                               ";
-h="+${m:0:25}+${m:0:12}+${m:0:12}+${m:0:12}+${m:0:12}+${m:0:12}+";
-header=("Domain${s:0:23}" "Your ISP${s:0:10}" "Google${s:0:10}" "4.2.2.2${s:0:10}" "OpenDNS${s:0:10}" "DNS Adv.${s:0:10}");
-echo "${h}";
-echo "| ${header[0]:0:23} | ${header[1]:0:10} | ${header[2]:0:10} | ${header[3]:0:10} | ${header[4]:0:10} | ${header[5]:0:10} |";
-echo "${h}";
-for i in "bbc.co.uk" "lifehacker.com" "nytimes.com"  "youtube.com" "wikipedia.org";
+for i in "must.get.nxdomain" "youtube.com" "wikipedia.org";
 do
     for z in "A" "AAAA" "MX" "CNAME" "NS" "PTR"  "SOA" "SPF" "SRV" "TXT";
     do
-        ii="${z} ${i}${s:23}";
-
-      echo -ne "| ${ii:0:23} |";
-
+      echo  "$z $i";
       for j in "${isp}"  "8.8.8.8"  "4.2.2.2" "208.67.222.222" "156.154.70.1";
       do
-        r="${s:10}$(dig ${z} +noall +stats +time=9 @${j} ${i} 2>&1 | awk '$2~/^Query$/{print $4" "$5}')";
-        echo -ne " ${r:${#r}-10} |";
+        dig ${z} +noall +stats +time=9 @${j} ${i} 2>&1 > /dev/null;
       done
-      echo -ne "\n${h}\n";
   done
 done
 
 
+kill $(cat /var/run/passivedns.pid)
 
+wc -l /var/log/passivedns.*
 
-echo ""
-echo "1) run passivedns"
-echo "2) upload log to elastic with \"node /opt/json2elajson2elastic.js /var/log/passivedns.log 192.168.33.111:9200/passivedns/raw/ \""
+#put tempalte
+curl -s -XPUT http://192.168.33.111:9200/_template/passivedns -d'
+{
+  "template" : "passivedns",
+  "settings" : {
+    "index.refresh_interval" : "2s",
+    "index.number_of_shards" : 1, 
+    "index.number_of_replicas" : 0 
+  },
+  "mappings" : {
+    "_default_" : {
+       "_all" : {"enabled" : true},
+       "dynamic_templates" : [ {
+         "string_fields" : {
+           "match" : "*",
+           "match_mapping_type" : "string",
+           "mapping" : {
+             "type" : "string", "index" : "analyzed", "omit_norms" : true,
+               "fields" : {
+                 "raw" : {"type": "string", "index" : "not_analyzed", "ignore_above" : 256}
+               }
+           }
+         }
+       } ]
+    }
+  }
+}
+'
+
+echo "uploading passivedns log to elasticsearch ..."
+node /opt/json2ela/json2elastic.js /var/log/passivedns.log 192.168.33.111:9200/passivedns/raw/ 
+
+sleep 3 
+
+curl -s -XGET 'http://192.168.33.111:9200/passivedns/raw/_search?pretty' -d '
+{
+	"size": 0,
+    "aggs" : {
+        "class" : {
+            "terms" : { "field" : "class" }
+        },
+         "type" : {
+            "terms" : { "field" : "type" }
+        }
+    }
+}
+'
+
