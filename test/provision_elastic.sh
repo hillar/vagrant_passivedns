@@ -10,8 +10,4 @@ echo "installing elastic"
 apt-get -y -qq install elasticsearch
 update-rc.d elasticsearch defaults 95 10
 /etc/init.d/elasticsearch start
-echo "done, you should get :: \"status\" : 200, ......"
-sleep 3
-
-curl -s http://localhost:9200/
-curl -s http://localhost:9200/_cat/health?v
+echo "done, try curl -s http://localhost:9200/_cat/health?v"

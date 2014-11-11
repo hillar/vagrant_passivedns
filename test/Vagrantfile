@@ -6,9 +6,9 @@ $BOX = 'chef/debian-7.7'
 $PDNSBOX = '../boxes/debian/debian-7.7/passivedns.box'
 
 boxes = [
-  { :name => :elastic,:ip => '192.168.33.111',:forward => 9200,:cpus => 2,:mem => 1024,:box => $BOX, :provision => 'build_elastic.bash' },
+  { :name => :elastic,:ip => '192.168.33.111',:forward => 9200,:cpus => 2,:mem => 1024,:box => $BOX, :provision => 'provision_elastic.sh' },
   #{ :name => :rest,:ip => '192.168.33.112',:forward => 433,:cpus => 1,:mem => 256, :box => $BOX, :provision => 'build_rest' },
-  { :name => :passivedns,:ip => '192.168.33.113',:cpus => 1,:mem => 256, :box => $PDNSBOX },
+  { :name => :passivedns,:ip => '192.168.33.113',:cpus => 1,:mem => 256, :box => $PDNSBOX, :provision => 'provision_passivedns.sh' },
   ]
 
 
