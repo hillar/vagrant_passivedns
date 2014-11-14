@@ -6,16 +6,22 @@
 #  - passivedns
 #  - elsticsearch
 #  - TODO https://tools.ietf.org/id/draft-dulaunoy-kaplan-passive-dns-cof-02.txt REST server
+# optional: wipes old build
 
 
 
 # by default debian 7.7 is used for boxes
 BOXDIR=../boxes/debian/debian-7.7
 BOXFILE=passivedns.box
+WIPE=0
 
 while :
 do
   case $1 in
+    --wipe)
+    WIPE=1
+    shift
+    ;;
   -d | --dir)
     BOXDIR=$2
     shift 2
@@ -34,7 +40,16 @@ do
   esac
 done
 
-
+if [ $WIPE -eq 1 ]; then
+	if [ -f "$BOXDIR/$BOXFILE" ]; then
+		echo "deleting $BOXDIR/$BOXFILE";
+		rm "$BOXDIR/$BOXFILE";
+		echo "destroying box $BOXDIR"
+		(cd "$BOXDIR"; vagrant destroy -f;)
+		echo "destroying all other.."
+		vagrant destroy -f;
+	fi
+fi
 
 
 #check for box, build if needed
