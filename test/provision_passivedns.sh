@@ -18,6 +18,10 @@ gv=$(./godeb list| head -1)
 dpkg -i go_1.4-godeb1_amd64.deb
 mv go_1.4-godeb1_amd64.deb /home/vagrant/
 go version
+if [ $? -ne 0 ]; then 
+  echo 'failed to install golang !?'
+  exit 1 
+fi
 
 #install heka
 apt-get -y -qq install cmake mercurial
@@ -29,6 +33,10 @@ make deb
 dpkg -i heka_0.9.0_amd64.deb 
 mv heka_0.9.0_amd64.deb /home/vagrant/
 hekad -version
+if [ $? -ne 0 ]; then 
+  echo 'failed to install heka !?'
+  exit 1 
+fi
 
 mkdir -p /opt/heka/etc
 cd /opt/heka/etc
@@ -38,8 +46,67 @@ cd /opt/heka/lua
 wget https://raw.githubusercontent.com/hillar/vagrant_passivedns/master/test/passivedns.cof.lua
 wget https://raw.githubusercontent.com/hillar/vagrant_passivedns/master/test/json.lua
 
- 
+curl -XPUT http://192.168.33.111:9200/_template/heka.sandbox.cof.passivedns -d'
+{
+  "template" : "heka.sandbox.cof.passivedns*",
+  "settings" : {
+    "index.refresh_interval" : "5s",
+    "index.number_of_shards" : 1,
+    "index.number_of_replicas" : 0
 
+  },
+  "mappings" : {
+    "_default_" : {
+       "_all" : {"enabled" : true},
+       "dynamic_templates" : [ {
+         "string_fields" : {
+           "match" : "*",
+           "match_mapping_type" : "string",
+           "mapping" : {
+             "type" : "string", "index" : "analyzed", "omit_norms" : true,
+               "fields" : {
+                 "raw" : {"type": "string", "index" : "not_analyzed", "ignore_above" : 256}
+               }
+           }
+         }
+       } ]
+    }
+  }
+}
+'
+curl -XPUT http://10.9.2.207:9200/_template/raw.passivedns -d'
+{
+  "template" : "raw.passivedns*",
+  "settings" : {
+    "index.refresh_interval" : "5s",
+    "index.number_of_shards" : 1,
+    "index.number_of_replicas" : 0
+
+  },
+  "mappings" : {
+    "_default_" : {
+       "_all" : {"enabled" : true},
+       "dynamic_templates" : [ {
+         "string_fields" : {
+           "match" : "*",
+           "match_mapping_type" : "string",
+           "mapping" : {
+             "type" : "string", "index" : "analyzed", "omit_norms" : true,
+               "fields" : {
+                 "raw" : {"type": "string", "index" : "not_analyzed", "ignore_above" : 256}
+               }
+           }
+         }
+       } ]
+    }
+  }
+}
+'
+ 
+# run heka & passivedns
+hekad -config=/opt/heka/etc/passivedns.toml &
+
+/opt/passivedns/bin/passivedns -j -J -P 1 -X 46CDNOPRSTMnfsxoryetaz -D
 
 # install nodejs
 apt-get -y -qq install curl
@@ -56,7 +123,7 @@ node json2elastic.js
 
 # fill logs 
 
-/opt/passivedns/bin/passivedns -j -J -P 1 -X 46CDNOPRSTMnfsxoryetaz -D
+
 
 sleep 1
 
