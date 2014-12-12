@@ -8,6 +8,40 @@ if [ $? -ne 0 ]; then
 	exit 1 
 fi
 
+
+#install golang
+cd /tmp/
+wget https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz
+tar -xzf godeb-amd64.tar.gz 
+gv=$(./godeb list| head -1)
+./godeb install $gv
+dpkg -i go_1.4-godeb1_amd64.deb
+mv go_1.4-godeb1_amd64.deb /home/vagrant/
+go version
+
+#install heka
+apt-get -y -qq install cmake mercurial
+cd /tmp/
+git clone https://github.com/mozilla-services/heka
+cd heka/
+source build.sh
+make deb
+dpkg -i heka_0.9.0_amd64.deb 
+mv heka_0.9.0_amd64.deb /home/vagrant/
+hekad -version
+
+mkdir -p /opt/heka/etc
+cd /opt/heka/etc
+wget https://raw.githubusercontent.com/hillar/vagrant_passivedns/master/test/passivedns.toml
+mkdir -p /opt/heka/lua
+cd /opt/heka/lua
+wget https://raw.githubusercontent.com/hillar/vagrant_passivedns/master/test/passivedns.cof.lua
+wget https://raw.githubusercontent.com/hillar/vagrant_passivedns/master/test/json.lua
+
+ 
+
+
+# install nodejs
 apt-get -y -qq install curl
 curl -sL https://deb.nodesource.com/setup | bash -
 apt-get -y -qq install nodejs

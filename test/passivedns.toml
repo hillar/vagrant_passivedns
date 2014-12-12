@@ -1,0 +1,37 @@
+[LogstreamerInput]
+log_directory = "/var/log"
+file_match = 'passivedns\.log'
+decoder = "Json"
+
+[Json]
+type = "SandboxDecoder"
+filename = "/opt/heka/lua/json.lua"
+[Json.config]
+type = "raw.passivedns"
+debug = false 
+
+[PassivednsCOF]
+type = "SandboxFilter"
+message_matcher = "Type == 'raw.passivedns'"
+filename = "/opt/heka/lua/passivedns.cof.lua"
+
+[ESJsonEncoder]
+index = "%{Type}-%{2006.01.02}"
+es_index_from_timestamp = true
+type_name = "%{Type}"
+
+[ElasticSearchOutput]
+message_matcher = "Type =~ /.*passivedns$/"
+server = "http://192.168.33.111:9200"
+flush_interval = 5000
+flush_count = 100
+encoder = "ESJsonEncoder"
+
+#[PayloadEncoder]
+#append_newlines = false
+
+#[RstEncoder]
+
+#[LogOutput]
+#message_matcher = "TRUE"
+#encoder = "RstEncoder"
